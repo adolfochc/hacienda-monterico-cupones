@@ -27,6 +27,13 @@ class User extends Authenticatable implements MustVerifyEmail
         'name',
         'email',
         'password',
+        'role',
+        'member_code',
+        'dni',
+        'phone',
+        'status',
+        'must_change_password',
+        'invitation_used_at',
     ];
 
     /**
@@ -48,6 +55,8 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'must_change_password' => 'boolean',
+        'invitation_used_at' => 'datetime',
     ];
 
     /**
@@ -58,4 +67,8 @@ class User extends Authenticatable implements MustVerifyEmail
     protected $appends = [
         'profile_photo_url',
     ];
+
+    public function couponAssignments() { return $this->hasMany(CouponAssignment::class); }
+    public function coupons() { return $this->belongsToMany(Coupon::class)->withPivot(['id', 'status', 'assigned_at', 'redeemed_at']); }
+    public function isAdmin(): bool { return $this->role === 'admin'; }
 }

@@ -1,0 +1,76 @@
+<?php
+
+use App\Models\Coupon;
+use App\Models\CouponAssignment;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Services\CouponQrToken;
+use Illuminate\Support\Facades\Crypt;
+
+uses(RefreshDatabase::class);
+
+function adminUser(): User
+{
+    return User::factory()->create(['role' => 'admin', 'status' => 'active', 'email_verified_at' => now()]);
+}
+
+test('administrator can create a member with assigned coupons', function () {
+    $coupon = Coupon::create(['name' => 'Postre gratis', 'valid_from' => today(), 'valid_until' => today()->addMonth(), 'is_active' => true]);
+
+    $response = $this->actingAs(adminUser())->post(route('members.store'), [
+        'name' => 'Socio Prueba', 'dni' => '76543210', 'email' => 'socio@example.com', 'coupon_ids' => [$coupon->id],
+    ]);
+
+    $response->assertSessionHasNoErrors()->assertSessionHas('temporaryCredentials');
+    $member = User::where('email', 'socio@example.com')->firstOrFail();
+    expect($member->member_code)->toBe('HMR-'.str_pad((string) $member->id, 6, '0', STR_PAD_LEFT))
+        ->and($member->must_change_password)->toBeTrue()
+        ->and($member->couponAssignments)->toHaveCount(1);
+});
+
+test('dni phone and email are optional when creating a member', function () {
+    $this->actingAs(adminUser())->post(route('members.store'), [
+        'name' => 'Socio sin contacto', 'dni' => null, 'email' => null, 'phone' => null, 'coupon_ids' => [],
+    ])->assertSessionHasNoErrors();
+
+    $member = User::where('name', 'Socio sin contacto')->firstOrFail();
+    expect($member->dni)->toBeNull()->and($member->email)->toBeNull()->and($member->phone)->toBeNull();
+});
+
+test('a coupon assignment can only be redeemed once', function () {
+    $admin = adminUser();
+    $member = User::factory()->create(['role' => 'member', 'status' => 'active', 'email_verified_at' => now()]);
+    $coupon = Coupon::create(['name' => 'Copa gratis', 'valid_from' => today(), 'valid_until' => today()->addMonth(), 'is_active' => true]);
+    $assignment = CouponAssignment::create(['coupon_id' => $coupon->id, 'user_id' => $member->id, 'assigned_at' => now()]);
+
+    $this->actingAs($admin)->post(route('coupons.redeem', $assignment))->assertSessionHasNoErrors();
+    expect($assignment->fresh()->status)->toBe('redeemed');
+    $this->actingAs($admin)->post(route('coupons.redeem', $assignment))->assertSessionHasErrors('coupon');
+});
+
+test('member must change a temporary password before opening dashboard', function () {
+    $member = User::factory()->create(['role' => 'member', 'status' => 'active', 'must_change_password' => true, 'email_verified_at' => now()]);
+    $this->actingAs($member)->get('/')->assertRedirect(route('password.first.edit'));
+    $this->actingAs($member)->put(route('password.first.update'), ['password' => 'NuevaClave123!', 'password_confirmation' => 'NuevaClave123!'])->assertRedirect('/');
+    expect($member->fresh()->must_change_password)->toBeFalse();
+});
+
+test('encrypted qr can be validated and redeemed only once', function () {
+    $admin = adminUser();
+    $member = User::factory()->create(['role' => 'member', 'status' => 'active', 'email_verified_at' => now()]);
+    $coupon = Coupon::create(['name' => 'QR seguro', 'valid_from' => today(), 'valid_until' => today()->addMonth(), 'is_active' => true]);
+    $assignment = CouponAssignment::create(['coupon_id' => $coupon->id, 'user_id' => $member->id, 'assigned_at' => now()]);
+    $token = CouponQrToken::issue($assignment);
+
+    $this->actingAs($admin)->postJson(route('coupons.qr.validate'), ['token' => $token])->assertOk()->assertJsonPath('member.member_code', $member->member_code);
+    $this->actingAs($admin)->post(route('coupons.qr.redeem'), ['token' => $token])->assertSessionHasNoErrors();
+    expect($assignment->fresh()->status)->toBe('redeemed');
+    $this->actingAs($admin)->postJson(route('coupons.qr.validate'), ['token' => $token])->assertUnprocessable();
+});
+
+test('altered and expired qr tokens are rejected', function () {
+    $admin = adminUser();
+    $this->actingAs($admin)->postJson(route('coupons.qr.validate'), ['token' => 'token-manipulado'])->assertUnprocessable();
+    $expired = Crypt::encryptString(json_encode(['version' => 1, 'assignment_id' => 1, 'member_id' => 1, 'expires_at' => now()->subMinute()->timestamp]));
+    $this->actingAs($admin)->postJson(route('coupons.qr.validate'), ['token' => $expired])->assertUnprocessable();
+});

@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\VelzonRoutesController;
+use App\Http\Controllers\MemberController;
+use App\Http\Controllers\CouponController;
+use App\Http\Controllers\FirstPasswordController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -14,15 +17,28 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',])->group(function () {
+Route::middleware(['auth:sanctum', config('jetstream.auth_session')])->group(function () {
+    Route::get('/primera-contrasena', [FirstPasswordController::class, 'edit'])->name('password.first.edit');
+    Route::put('/primera-contrasena', [FirstPasswordController::class, 'update'])->name('password.first.update');
+
+    Route::middleware('password.changed')->group(function () {
+        Route::get('/', [VelzonRoutesController::class, 'dashboard']);
+
+        Route::middleware('admin')->group(function () {
+            Route::get('/socios', [MemberController::class, 'index'])->name('members.index');
+            Route::post('/socios', [MemberController::class, 'store'])->name('members.store');
+            Route::patch('/socios/{member}/estado', [MemberController::class, 'toggleStatus'])->name('members.status');
+            Route::get('/cupones', [CouponController::class, 'index'])->name('coupons.index');
+            Route::post('/cupones', [CouponController::class, 'store'])->name('coupons.store');
+            Route::post('/cupones/{coupon}/asignar', [CouponController::class, 'assign'])->name('coupons.assign');
+            Route::post('/asignaciones/{assignment}/canjear', [CouponController::class, 'redeem'])->name('coupons.redeem');
+            Route::post('/canjes/qr/validar', [CouponController::class, 'validateQr'])->name('coupons.qr.validate');
+            Route::post('/canjes/qr/canjear', [CouponController::class, 'redeemQr'])->name('coupons.qr.redeem');
+        });
     
     Route::controller(VelzonRoutesController::class)->group(function () {
 
         // dashboards
-        Route::get('/', 'dashboard');
-        Route::get('/socios', 'members');
-        Route::get('/cupones', 'coupons');
-
         // pages routes
         Route::get("/pages/starter", "pages_starter"); 
         Route::get("/pages/maintenance", "pages_maintenance"); 
@@ -51,5 +67,6 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         Route::get("/auth/success-msg-basic", "auth_success_msg_basic");
         Route::get("/auth/success-msg-cover", "auth_success_msg_cover");
 
+        });
     });
 });

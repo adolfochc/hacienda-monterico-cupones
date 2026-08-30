@@ -4,18 +4,45 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Models\User;
+use App\Models\Coupon;
+use App\Models\CouponAssignment;
+use App\Services\CouponQrToken;
 
 class VelzonRoutesController extends Controller
 {
     //
 
-    public function dashboard()
+    public function dashboard(Request $request)
     {
-        return Inertia::render('dashboards/ecommerce/index');
+        if (!$request->user()->isAdmin()) {
+            $assignments = $request->user()->couponAssignments()->with('coupon')->latest('assigned_at')->get()->map(fn ($assignment) => [
+                'id' => $assignment->id,
+                'status' => $assignment->status,
+                'redeemed_at' => $assignment->redeemed_at?->format('d/m/Y H:i'),
+                'coupon' => [
+                    'name' => $assignment->coupon->name,
+                    'description' => $assignment->coupon->description,
+                    'valid_until' => $assignment->coupon->valid_until->format('d/m/Y'),
+                ],
+                'qr_token' => $assignment->status === 'available' ? CouponQrToken::issue($assignment) : null,
+            ]);
+            return Inertia::render('member/Dashboard', ['assignments' => $assignments]);
+        }
+
+        return Inertia::render('dashboards/ecommerce/index', [
+            'stats' => [
+                'members' => User::where('role', 'member')->where('status', 'active')->count(),
+                'assigned' => CouponAssignment::count(),
+                'redeemed' => CouponAssignment::where('status', 'redeemed')->whereMonth('redeemed_at', now()->month)->count(),
+                'expiring' => Coupon::whereBetween('valid_until', [today(), today()->addDays(7)])->count(),
+            ],
+            'activity' => CouponAssignment::with(['member:id,name', 'coupon:id,name'])->where('status', 'redeemed')->latest('redeemed_at')->limit(6)->get()->map(fn ($item) => [
+                'name' => $item->member->name, 'coupon' => $item->coupon->name, 'time' => $item->redeemed_at->diffForHumans(),
+            ]),
+        ]);
     }
 
-    public function members() { return Inertia::render('members/index'); }
-    public function coupons() { return Inertia::render('coupons/index'); }
 
     public function pages_starter() {
         return Inertia::render('pages/starter');
