@@ -6,7 +6,6 @@ import { layoutComputed } from "@/state/helpers";
 
 import NavBar from "@/Components/nav-bar.vue";
 import Menu from "@/Components/menu.vue";
-import RightBar from "@/Components/right-bar.vue";
 import Footer from "@/Components/footer.vue";
 localStorage.setItem('hoverd', false);
 
@@ -14,7 +13,7 @@ localStorage.setItem('hoverd', false);
  * Vertical layout
  */
 export default {
-  components: { NavBar, RightBar, Footer, simplebar, Menu, Link },
+  components: { NavBar, Footer, simplebar, Menu, Link },
   data() {
     return {
       isMenuCondensed: false,
@@ -75,6 +74,9 @@ export default {
     hideRightSidebar() {
       document.body.classList.remove("right-bar-enabled");
     },
+    closeSidebar() {
+      document.body.classList.remove('vertical-sidebar-enable');
+    },
 
   },
   mounted() {
@@ -83,7 +85,13 @@ export default {
     }
 
     document.getElementById('overlay').addEventListener('click', () => {
-      document.body.classList.remove('vertical-sidebar-enable');
+      this.closeSidebar();
+    });
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') this.closeSidebar();
+    });
+    window.addEventListener('resize', () => {
+      if (window.innerWidth >= 992) this.closeSidebar();
     });
   }
 };
@@ -120,6 +128,9 @@ export default {
             id="vertical-hover" @click="initActiveMenu">
             <i class="ri-record-circle-line"></i>
           </button>
+          <button type="button" class="hmr-sidebar-close" aria-label="Cerrar menú" @click="closeSidebar">
+            <i class="ri-close-line"></i>
+          </button>
         </div>
 
         <simplebar id="scrollbar" class="h-100" ref="scrollbar">
@@ -144,7 +155,6 @@ export default {
       </div>
       <Footer />
     </div>
-    <RightBar />
   </div>
 </template>
-<style>:root{--hmr-cream:#fff8e9;--hmr-gold:#bfb574;--hmr-green:#576443;--hmr-taupe:#9c8a72;--hmr-rust:#8f3b28;--hmr-brown:#332820;--hmr-ink:#191919}.app-menu{background:var(--hmr-brown)!important;border-right:0!important}.navbar-brand-box{background:var(--hmr-brown)!important;height:88px!important}.hmr-brand{height:88px!important;padding-top:15px}.hmr-wordmark{font-family:Georgia,'Times New Roman',serif;color:var(--hmr-cream);line-height:.85;display:inline-flex;flex-direction:column;font-size:12px;letter-spacing:.08em}.hmr-wordmark b{font-size:22px;letter-spacing:-.03em}.hmr-wordmark small{font-family:Arial,sans-serif;font-size:7px;letter-spacing:.22em;margin-top:7px;color:var(--hmr-gold)}.hmr-monogram{font-family:Georgia,serif;color:var(--hmr-cream);font-size:28px;font-weight:700}.page-content{background:#f7f3ea!important;padding-top:112px!important}.main-content{min-height:100vh}.card{border:0;box-shadow:0 8px 30px rgba(51,40,32,.06)}</style>
+<style>:root{--hmr-cream:#fff8e9;--hmr-gold:#bfb574;--hmr-green:#576443;--hmr-taupe:#9c8a72;--hmr-rust:#8f3b28;--hmr-brown:#332820;--hmr-ink:#191919}.app-menu{background:var(--hmr-brown)!important;border-right:0!important}.navbar-brand-box{background:var(--hmr-brown)!important;height:88px!important}.hmr-brand{height:88px!important;padding-top:15px}.hmr-wordmark{font-family:Georgia,'Times New Roman',serif;color:var(--hmr-cream);line-height:.85;display:inline-flex;flex-direction:column;font-size:12px;letter-spacing:.08em}.hmr-wordmark b{font-size:22px;letter-spacing:-.03em}.hmr-wordmark small{font-family:Arial,sans-serif;font-size:7px;letter-spacing:.22em;margin-top:7px;color:var(--hmr-gold)}.hmr-monogram{font-family:Georgia,serif;color:var(--hmr-cream);font-size:28px;font-weight:700}.page-content{background:#f7f3ea!important;padding-top:112px!important}.main-content{min-height:100vh;display:flex;flex-direction:column}.main-content .page-content{flex:1}.card{border:0;box-shadow:0 8px 30px rgba(51,40,32,.06)}@media(max-width:991.98px){.page-content{padding:92px 12px 24px!important}.vertical-sidebar-enable .app-menu{transform:translateX(0)!important}.footer{left:0!important}.main-content{margin-left:0!important}}@media(max-width:575.98px){.container-fluid{padding-left:4px!important;padding-right:4px!important}.page-title-box{align-items:flex-start!important;gap:12px}.page-title-box h1,.page-title-box h2{font-size:28px!important}.card{border-radius:14px!important}}</style>

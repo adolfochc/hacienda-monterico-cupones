@@ -23,6 +23,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session')])->group(fun
 
     Route::middleware('password.changed')->group(function () {
         Route::get('/', [VelzonRoutesController::class, 'dashboard']);
+        Route::post('/mis-cupones/{assignment}/qr', [VelzonRoutesController::class, 'refreshCouponQr'])->name('member.coupons.qr');
 
         Route::middleware('admin')->group(function () {
             Route::get('/socios', [MemberController::class, 'index'])->name('members.index');

@@ -25,7 +25,6 @@ class VelzonRoutesController extends Controller
                     'description' => $assignment->coupon->description,
                     'valid_until' => $assignment->coupon->valid_until->format('d/m/Y'),
                 ],
-                'qr_token' => $assignment->status === 'available' ? CouponQrToken::issue($assignment) : null,
             ]);
             return Inertia::render('member/Dashboard', ['assignments' => $assignments]);
         }
@@ -40,6 +39,22 @@ class VelzonRoutesController extends Controller
             'activity' => CouponAssignment::with(['member:id,name', 'coupon:id,name'])->where('status', 'redeemed')->latest('redeemed_at')->limit(6)->get()->map(fn ($item) => [
                 'name' => $item->member->name, 'coupon' => $item->coupon->name, 'time' => $item->redeemed_at->diffForHumans(),
             ]),
+        ]);
+    }
+
+    public function refreshCouponQr(Request $request, CouponAssignment $assignment)
+    {
+        abort_unless($assignment->user_id === $request->user()->id, 403);
+        $assignment->load('coupon');
+        abort_unless(
+            $assignment->status === 'available' && $assignment->coupon->is_active && !$assignment->coupon->valid_until->lt(today()),
+            422,
+            'Este cupón ya no está disponible.'
+        );
+
+        return response()->json([
+            'token' => CouponQrToken::issue($assignment),
+            'expires_at' => now()->addMinutes(5)->timestamp,
         ]);
     }
 

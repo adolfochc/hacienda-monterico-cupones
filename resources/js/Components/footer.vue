@@ -1,16 +1,13 @@
 <template>
     <footer class="footer">
         <BContainer fluid>
-            <BRow>
-                <BCol col sm="6">
-                    {{ new Date().getFullYear() }} © Velzon.
-                </BCol>
-                <BCol col sm="6">
-                    <div class="text-sm-end d-none d-sm-block">
-                        Design & Develop by Themesbrand
-                    </div>
-                </BCol>
-            </BRow>
+            <div class="hmr-footer-copy">
+                © {{ new Date().getFullYear() }} Jaketec. Todos los derechos reservados.
+            </div>
         </BContainer>
     </footer>
 </template>
+
+<style scoped>
+.hmr-footer-copy{text-align:center;color:#75695f;font-size:13px;letter-spacing:.01em}
+</style>

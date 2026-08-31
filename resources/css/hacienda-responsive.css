@@ -1,0 +1,69 @@
+/* Responsive refinements for the product views. */
+.product-footer{text-align:center;color:#786d64;font-size:10px;margin-top:50px}
+.hmr-sidebar-close{display:none}
+
+@media (max-width:991.98px){
+  body .app-menu{display:block!important;width:min(280px,84vw)!important;max-width:84vw;transform:translateX(-105%)!important;visibility:hidden;transition:transform .25s ease,visibility 0s linear .25s!important;box-shadow:18px 0 45px rgba(18,13,10,.24);z-index:1005!important}
+  body.vertical-sidebar-enable{overflow:hidden}
+  body.vertical-sidebar-enable .app-menu{transform:translateX(0)!important;visibility:visible;transition:transform .25s ease!important}
+  body .vertical-overlay{position:fixed;inset:0;display:block!important;background:rgba(25,20,16,.52);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .25s ease,visibility 0s linear .25s;z-index:1004}
+  body.vertical-sidebar-enable .vertical-overlay{opacity:1;visibility:visible;pointer-events:auto;transition:opacity .25s ease}
+  .hmr-sidebar-close{position:absolute;right:12px;top:20px;display:grid;place-items:center;width:42px;height:42px;border:0;border-radius:10px;background:rgba(255,248,233,.1);color:#fff8e9;font-size:23px;z-index:2}
+  .app-menu .navbar-brand-box{padding-right:56px}
+}
+
+@media (max-width:700px){
+  .hmr-page>header{align-items:flex-start!important;gap:15px;flex-direction:column}
+  .hmr-page>header>button{width:100%;min-height:48px}
+  .hmr-page .toolbar{align-items:stretch;flex-wrap:wrap}
+  .hmr-page .toolbar .search{flex-basis:100%}
+  .hmr-page .toolbar .search input{min-height:48px;font-size:16px}
+  .hmr-page .toolbar .filter{flex:1;min-height:44px}
+  .hmr-page .toolbar+.panel{padding:8px 12px}
+  .hmr-page .toolbar+.panel .table-responsive{overflow:visible}
+  .hmr-page .toolbar+.panel table,.hmr-page .toolbar+.panel tbody,.hmr-page .toolbar+.panel tr,.hmr-page .toolbar+.panel td{display:block;width:100%}
+  .hmr-page .toolbar+.panel thead{display:none}
+  .hmr-page .toolbar+.panel tr{padding:10px 0;border-bottom:1px solid #e9e1d5}
+  .hmr-page .toolbar+.panel td{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:9px 4px;border:0;text-align:right}
+  .hmr-page .toolbar+.panel td:before{color:#927f70;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;text-align:left}
+  .hmr-page .toolbar+.panel td:nth-child(1):before{content:'Socio'}
+  .hmr-page .toolbar+.panel td:nth-child(2):before{content:'Código / contacto'}
+  .hmr-page .toolbar+.panel td:nth-child(3):before{content:'Invitación'}
+  .hmr-page .toolbar+.panel td:nth-child(4):before{content:'Disponibles'}
+  .hmr-page .toolbar+.panel td:nth-child(5):before{content:'Estado'}
+  .hmr-page .toolbar+.panel td:nth-child(6):before{content:'Acción'}
+  .hmr-page .toolbar+.panel .state{min-width:110px;min-height:42px}
+  .member-modal,.invitation-modal{padding:22px 18px!important;max-height:calc(100vh - 24px);overflow:auto}
+  .member-modal input:not([type=checkbox]){min-height:48px;font-size:16px}
+  .invitation-modal .access{margin:18px 16px}
+  .invitation-modal .invite-actions button{min-height:47px}
+}
+
+@media (max-width:600px){
+  .page>header,.page .list-head{align-items:stretch!important;gap:12px;flex-direction:column}
+  .page>header>div:last-child{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .page>header .scan{margin:0}
+  .page>header button{min-height:48px}
+  .page .list{padding:16px 12px}
+  .page .list-head input{width:100%;min-height:48px;font-size:16px}
+  .page .list table,.page .list tbody,.page .list tr,.page .list td{display:block;width:100%}
+  .page .list thead{display:none}
+  .page .list tr{padding:10px 0;border-bottom:1px solid #eee7da}
+  .page .list td{display:flex;justify-content:space-between;align-items:center;gap:12px;border:0;padding:8px 2px;text-align:right}
+  .page .list td:before{color:#927f70;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+  .page .list td:nth-child(1):before{content:'Socio'}
+  .page .list td:nth-child(2):before{content:'Cupón'}
+  .page .list td:nth-child(3):before{content:'Acción'}
+  .page .list td button{min-height:43px}
+  .page .scanner,.page .confirm,.page .form{padding:22px 18px;max-height:calc(100vh - 24px);overflow:auto}
+  .page .dates,.page .confirm dl{grid-template-columns:1fr}
+  .page .form input:not([type=checkbox]),.page .form textarea{min-height:48px;font-size:16px}
+  .page .confirm footer,.page .form footer{flex-direction:column-reverse}
+  .page .confirm footer button,.page .form footer button{width:100%;min-height:47px}
+  main>.welcome{padding:38px 0 24px}
+  main>.grid .coupon{padding:22px;min-height:160px}
+  main>.mask .voucher{max-height:calc(100vh - 24px);overflow:auto}
+  main>.mask .voucher-body{padding:24px 18px}
+  main>.mask .voucher-body dl{grid-template-columns:1fr;gap:12px}
+  main>.mask .qr canvas{max-width:200px}
+}

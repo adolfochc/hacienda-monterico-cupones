@@ -74,3 +74,15 @@ test('altered and expired qr tokens are rejected', function () {
     $expired = Crypt::encryptString(json_encode(['version' => 1, 'assignment_id' => 1, 'member_id' => 1, 'expires_at' => now()->subMinute()->timestamp]));
     $this->actingAs($admin)->postJson(route('coupons.qr.validate'), ['token' => $expired])->assertUnprocessable();
 });
+
+test('member can renew only their own qr token', function () {
+    $member = User::factory()->create(['role' => 'member', 'status' => 'active', 'email_verified_at' => now()]);
+    $other = User::factory()->create(['role' => 'member', 'status' => 'active', 'email_verified_at' => now()]);
+    $coupon = Coupon::create(['name' => 'QR renovable', 'valid_from' => today(), 'valid_until' => today()->addMonth(), 'is_active' => true]);
+    $assignment = CouponAssignment::create(['coupon_id' => $coupon->id, 'user_id' => $member->id, 'assigned_at' => now()]);
+
+    $first = $this->actingAs($member)->postJson(route('member.coupons.qr', $assignment))->assertOk()->json('token');
+    $second = $this->actingAs($member)->postJson(route('member.coupons.qr', $assignment))->assertOk()->json('token');
+    expect($first)->not->toBe($second);
+    $this->actingAs($other)->postJson(route('member.coupons.qr', $assignment))->assertForbidden();
+});
