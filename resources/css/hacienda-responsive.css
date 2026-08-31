@@ -1,6 +1,9 @@
 /* Responsive refinements for the product views. */
 .product-footer{text-align:center;color:#786d64;font-size:10px;margin-top:50px}
 .hmr-sidebar-close{display:none}
+.invitation-modal>.close{top:18px!important;right:18px!important;display:grid!important;place-items:center;width:40px;height:40px;padding:0!important;border:1px solid rgba(51,40,32,.12)!important;border-radius:50%!important;background:#fffaf1!important;color:#332820!important;font-size:22px!important;line-height:1;box-shadow:0 5px 16px rgba(51,40,32,.18);z-index:5;transition:background .18s ease,color .18s ease,transform .18s ease}
+.invitation-modal>.close:hover{background:#8f3b28!important;color:#fff!important;transform:scale(1.04)}
+.invitation-modal>.close:focus-visible{outline:3px solid rgba(191,181,116,.65);outline-offset:2px}
 
 @media (max-width:991.98px){
   body .app-menu{display:block!important;width:min(280px,84vw)!important;max-width:84vw;transform:translateX(-105%)!important;visibility:hidden;transition:transform .25s ease,visibility 0s linear .25s!important;box-shadow:18px 0 45px rgba(18,13,10,.24);z-index:1005!important}
@@ -34,6 +37,7 @@
   .hmr-page .toolbar+.panel td:nth-child(6):before{content:'Acción'}
   .hmr-page .toolbar+.panel .state{min-width:110px;min-height:42px}
   .member-modal,.invitation-modal{padding:22px 18px!important;max-height:calc(100vh - 24px);overflow:auto}
+  .invitation-modal>.close{position:sticky!important;top:0!important;float:right;margin:0 0 -40px;right:0!important}
   .member-modal input:not([type=checkbox]){min-height:48px;font-size:16px}
   .invitation-modal .access{margin:18px 16px}
   .invitation-modal .invite-actions button{min-height:47px}
