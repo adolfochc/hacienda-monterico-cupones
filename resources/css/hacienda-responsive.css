@@ -69,5 +69,5 @@
   main>.mask .voucher{max-height:calc(100vh - 24px);overflow:auto}
   main>.mask .voucher-body{padding:24px 18px}
   main>.mask .voucher-body dl{grid-template-columns:1fr;gap:12px}
-  main>.mask .qr canvas{max-width:200px}
+  main>.mask .qr img,main>.mask .qr-placeholder{max-width:200px;max-height:200px;width:min(200px,70vw);height:min(200px,70vw)}
 }
