@@ -132,7 +132,7 @@ return [
     */
 
     'features' => [
-        Features::registration(),
+        // El alta de socios se realiza exclusivamente mediante /registro y una tarjeta válida.
         Features::resetPasswords(),
         Features::emailVerification(),
         Features::updateProfileInformation(),

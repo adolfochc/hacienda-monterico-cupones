@@ -3,6 +3,7 @@ import { Link } from '@inertiajs/vue3';
 const items = [
   { label: 'Resumen', href: '/', icon: 'ri-layout-grid-line' },
   { label: 'Socios', href: '/socios', icon: 'ri-group-line' },
+  { label: 'Tarjetas', href: '/tarjetas', icon: 'ri-bank-card-line' },
   { label: 'Cupones', href: '/cupones', icon: 'ri-coupon-3-line' },
 ];
 const closeMobileMenu = () => document.body.classList.remove('vertical-sidebar-enable');

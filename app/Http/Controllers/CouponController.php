@@ -54,7 +54,10 @@ class CouponController extends Controller
             if ($locked->status !== 'available' || !$locked->coupon->is_active || now()->toDateString() > $locked->coupon->valid_until->toDateString()) {
                 throw ValidationException::withMessages(['coupon' => 'Este cupón ya no está disponible para canje.']);
             }
-            $locked->update(['status' => 'redeemed', 'redeemed_at' => now(), 'redeemed_by' => $request->user()->id, 'redemption_note' => $request->input('note')]);
+            $locked->update(['status' => 'redeemed', 'redeemed_at' => now(), 'redeemed_by' => $request->user()->id, 'redemption_note' => $request->input('note'), 'redemption_method' => $request->filled('token') ? 'qr' : 'manual']);
+            if ($locked->booklet_id && !CouponAssignment::where('booklet_id', $locked->booklet_id)->where('status', 'available')->exists()) {
+                $locked->booklet()->update(['status' => 'exhausted']);
+            }
         });
         return back()->with('success', 'Cupón canjeado y bloqueado correctamente.');
     }

@@ -26,7 +26,12 @@ class VelzonRoutesController extends Controller
                     'valid_until' => $assignment->coupon->valid_until->format('d/m/Y'),
                 ],
             ]);
-            return Inertia::render('member/Dashboard', ['assignments' => $assignments]);
+            $booklet = $request->user()->booklet()->withCount([
+                'assignments',
+                'assignments as available_count' => fn ($q) => $q->where('status', 'available'),
+                'assignments as redeemed_count' => fn ($q) => $q->where('status', 'redeemed'),
+            ])->first();
+            return Inertia::render('member/Dashboard', ['assignments' => $assignments, 'booklet' => $booklet]);
         }
 
         return Inertia::render('dashboards/ecommerce/index', [

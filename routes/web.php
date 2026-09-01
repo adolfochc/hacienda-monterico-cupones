@@ -1,10 +1,21 @@
 <?php
 
-use App\Http\Controllers\VelzonRoutesController;
-use App\Http\Controllers\MemberController;
+use App\Http\Controllers\CardBatchController;
 use App\Http\Controllers\CouponController;
+use App\Http\Controllers\ExportController;
 use App\Http\Controllers\FirstPasswordController;
+use App\Http\Controllers\MemberController;
+use App\Http\Controllers\MembershipRegistrationController;
+use App\Http\Controllers\VelzonRoutesController;
 use Illuminate\Support\Facades\Route;
+
+Route::middleware('guest')->group(function () {
+    Route::get('/registro', [MembershipRegistrationController::class, 'create'])->name('membership.register');
+    Route::post('/registro', [MembershipRegistrationController::class, 'store'])->middleware('throttle:5,1')->name('membership.register.store');
+    Route::get('/registro/verificar/{token}', [MembershipRegistrationController::class, 'show'])->name('membership.verify.show');
+    Route::post('/registro/verificar', [MembershipRegistrationController::class, 'verify'])->middleware('throttle:10,1')->name('membership.verify');
+    Route::post('/registro/reenviar', [MembershipRegistrationController::class, 'resend'])->middleware('throttle:3,1')->name('membership.verify.resend');
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -27,8 +38,12 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session')])->group(fun
 
         Route::middleware('admin')->group(function () {
             Route::get('/socios', [MemberController::class, 'index'])->name('members.index');
-            Route::post('/socios', [MemberController::class, 'store'])->name('members.store');
             Route::patch('/socios/{member}/estado', [MemberController::class, 'toggleStatus'])->name('members.status');
+            Route::get('/tarjetas', [CardBatchController::class, 'index'])->name('cards.index');
+            Route::post('/lotes', [CardBatchController::class, 'store'])->name('card-batches.store');
+            Route::patch('/tarjetas/{card}/estado', [CardBatchController::class, 'toggle'])->name('cards.status');
+            Route::get('/exportaciones/socios', [ExportController::class, 'members'])->name('exports.members');
+            Route::get('/exportaciones/resumen', [ExportController::class, 'summary'])->name('exports.summary');
             Route::get('/cupones', [CouponController::class, 'index'])->name('coupons.index');
             Route::post('/cupones', [CouponController::class, 'store'])->name('coupons.store');
             Route::post('/cupones/{coupon}/asignar', [CouponController::class, 'assign'])->name('coupons.assign');
@@ -36,37 +51,37 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session')])->group(fun
             Route::post('/canjes/qr/validar', [CouponController::class, 'validateQr'])->name('coupons.qr.validate');
             Route::post('/canjes/qr/canjear', [CouponController::class, 'redeemQr'])->name('coupons.qr.redeem');
         });
-    
-    Route::controller(VelzonRoutesController::class)->group(function () {
 
-        // dashboards
-        // pages routes
-        Route::get("/pages/starter", "pages_starter"); 
-        Route::get("/pages/maintenance", "pages_maintenance"); 
-        Route::get("/pages/coming-soon", "pages_coming_soon"); 
+        Route::controller(VelzonRoutesController::class)->group(function () {
 
-        // auth sample page routes
-        Route::get("/auth/signin-basic", "auth_signin_basic");
-        Route::get("/auth/signin-cover", "auth_signin_cover");
-        Route::get("/auth/signup-basic", "auth_signup_basic");
-        Route::get("/auth/signup-cover", "auth_signup_cover");
-        Route::get("/auth/reset-pwd-basic", "auth_reset_pwd_basic");
-        Route::get("/auth/reset-pwd-cover", "auth_reset_pwd_cover");
-        Route::get("/auth/create-pwd-basic", "auth_create_pwd_basic");
-        Route::get("/auth/create-pwd-cover", "auth_create_pwd_cover");
-        Route::get("/auth/lockscreen-basic", "auth_lockscreen_basic");
-        Route::get("/auth/lockscreen-cover", "auth_lockscreen_cover");
-        Route::get("/auth/twostep-basic", "auth_twostep_basic");
-        Route::get("/auth/twostep-cover", "auth_twostep_cover");
-        Route::get("/auth/404", "auth_404");
-        Route::get("/auth/500", "auth_500");
-        Route::get("/auth/404-basic", "auth_404_basic");
-        Route::get("/auth/404-cover", "auth_404_cover");
-        Route::get("/auth/ofline", "auth_ofline");
-        Route::get("/auth/logout-basic", "auth_logout_basic");
-        Route::get("/auth/logout-cover", "auth_logout_cover");
-        Route::get("/auth/success-msg-basic", "auth_success_msg_basic");
-        Route::get("/auth/success-msg-cover", "auth_success_msg_cover");
+            // dashboards
+            // pages routes
+            Route::get('/pages/starter', 'pages_starter');
+            Route::get('/pages/maintenance', 'pages_maintenance');
+            Route::get('/pages/coming-soon', 'pages_coming_soon');
+
+            // auth sample page routes
+            Route::get('/auth/signin-basic', 'auth_signin_basic');
+            Route::get('/auth/signin-cover', 'auth_signin_cover');
+            Route::get('/auth/signup-basic', 'auth_signup_basic');
+            Route::get('/auth/signup-cover', 'auth_signup_cover');
+            Route::get('/auth/reset-pwd-basic', 'auth_reset_pwd_basic');
+            Route::get('/auth/reset-pwd-cover', 'auth_reset_pwd_cover');
+            Route::get('/auth/create-pwd-basic', 'auth_create_pwd_basic');
+            Route::get('/auth/create-pwd-cover', 'auth_create_pwd_cover');
+            Route::get('/auth/lockscreen-basic', 'auth_lockscreen_basic');
+            Route::get('/auth/lockscreen-cover', 'auth_lockscreen_cover');
+            Route::get('/auth/twostep-basic', 'auth_twostep_basic');
+            Route::get('/auth/twostep-cover', 'auth_twostep_cover');
+            Route::get('/auth/404', 'auth_404');
+            Route::get('/auth/500', 'auth_500');
+            Route::get('/auth/404-basic', 'auth_404_basic');
+            Route::get('/auth/404-cover', 'auth_404_cover');
+            Route::get('/auth/ofline', 'auth_ofline');
+            Route::get('/auth/logout-basic', 'auth_logout_basic');
+            Route::get('/auth/logout-cover', 'auth_logout_cover');
+            Route::get('/auth/success-msg-basic', 'auth_success_msg_basic');
+            Route::get('/auth/success-msg-cover', 'auth_success_msg_cover');
 
         });
     });

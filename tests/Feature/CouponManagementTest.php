@@ -3,8 +3,8 @@
 use App\Models\Coupon;
 use App\Models\CouponAssignment;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\Services\CouponQrToken;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Crypt;
 
 uses(RefreshDatabase::class);
@@ -14,27 +14,11 @@ function adminUser(): User
     return User::factory()->create(['role' => 'admin', 'status' => 'active', 'email_verified_at' => now()]);
 }
 
-test('administrator can create a member with assigned coupons', function () {
-    $coupon = Coupon::create(['name' => 'Postre gratis', 'valid_from' => today(), 'valid_until' => today()->addMonth(), 'is_active' => true]);
-
-    $response = $this->actingAs(adminUser())->post(route('members.store'), [
-        'name' => 'Socio Prueba', 'dni' => '76543210', 'email' => 'socio@example.com', 'coupon_ids' => [$coupon->id],
-    ]);
-
-    $response->assertSessionHasNoErrors()->assertSessionHas('temporaryCredentials');
-    $member = User::where('email', 'socio@example.com')->firstOrFail();
-    expect($member->member_code)->toBe('HMR-'.str_pad((string) $member->id, 6, '0', STR_PAD_LEFT))
-        ->and($member->must_change_password)->toBeTrue()
-        ->and($member->couponAssignments)->toHaveCount(1);
-});
-
-test('dni phone and email are optional when creating a member', function () {
-    $this->actingAs(adminUser())->post(route('members.store'), [
-        'name' => 'Socio sin contacto', 'dni' => null, 'email' => null, 'phone' => null, 'coupon_ids' => [],
-    ])->assertSessionHasNoErrors();
-
-    $member = User::where('name', 'Socio sin contacto')->firstOrFail();
-    expect($member->dni)->toBeNull()->and($member->email)->toBeNull()->and($member->phone)->toBeNull();
+test('administrator cannot create members manually', function () {
+    $this->actingAs(adminUser())->post('/socios', [
+        'name' => 'Socio manual', 'email' => 'manual@example.com',
+    ])->assertStatus(405);
+    expect(User::where('email', 'manual@example.com')->exists())->toBeFalse();
 });
 
 test('a coupon assignment can only be redeemed once', function () {
