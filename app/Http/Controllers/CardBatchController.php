@@ -8,7 +8,9 @@ use App\Models\Coupon;
 use App\Models\MembershipCard;
 use App\Services\ActivationCodeService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class CardBatchController extends Controller
@@ -39,7 +41,7 @@ class CardBatchController extends Controller
                     $hash = $codes->hash($code);
                 } while (MembershipCard::where('activation_code_hash', $hash)->exists());
                 $plain[] = $code;
-                MembershipCard::create(['activation_code_hash' => $hash, 'activation_code_last4' => substr($codes->normalize($code), -4), 'booklet_template_id' => $template->id, 'card_batch_id' => $batch->id, 'status' => 'available', 'expires_at' => $data['expires_at'] ?? null, 'created_by' => $request->user()->id]);
+                MembershipCard::create(['activation_code_hash' => $hash, 'activation_code_encrypted' => Crypt::encryptString($code), 'activation_code_last4' => substr($codes->normalize($code), -4), 'booklet_template_id' => $template->id, 'card_batch_id' => $batch->id, 'status' => 'available', 'expires_at' => $data['expires_at'] ?? null, 'created_by' => $request->user()->id]);
             }
 
             return [$batch, $plain];
@@ -61,5 +63,49 @@ class CardBatchController extends Controller
         } $card->update(['status' => $card->status === 'blocked' ? 'available' : 'blocked']);
 
         return back()->with('success', 'Estado de tarjeta actualizado.');
+    }
+
+    public function export(CardBatch $batch, ActivationCodeService $codes)
+    {
+        $plainCodes = DB::transaction(function () use ($batch, $codes) {
+            $cards = MembershipCard::where('card_batch_id', $batch->id)->lockForUpdate()->orderBy('id')->get();
+            if ($cards->contains(fn ($card) => ! $card->activation_code_encrypted && $card->status === 'activated')) {
+                throw ValidationException::withMessages(['batch' => 'Este lote contiene tarjetas activadas cuyos códigos originales no son recuperables.']);
+            }
+
+            return $cards->map(function ($card) use ($codes) {
+                if ($card->activation_code_encrypted) {
+                    return Crypt::decryptString($card->activation_code_encrypted);
+                }
+
+                do {
+                    $code = $codes->generate();
+                    $hash = $codes->hash($code);
+                } while (MembershipCard::where('activation_code_hash', $hash)->whereKeyNot($card->id)->exists());
+
+                $card->update([
+                    'activation_code_hash' => $hash,
+                    'activation_code_encrypted' => Crypt::encryptString($code),
+                    'activation_code_last4' => substr($codes->normalize($code), -4),
+                ]);
+
+                return $code;
+            });
+        });
+
+        return $this->downloadCodes($batch, $plainCodes);
+    }
+
+    private function downloadCodes(CardBatch $batch, iterable $plainCodes)
+    {
+        return response()->streamDownload(function () use ($plainCodes) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF");
+            fputcsv($out, ['codigo_activacion', 'url_qr']);
+            foreach ($plainCodes as $code) {
+                fputcsv($out, [$code, route('membership.register')]);
+            }
+            fclose($out);
+        }, 'lote-'.$batch->id.'-codigos.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 }

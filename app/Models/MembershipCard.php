@@ -6,9 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class MembershipCard extends Model
 {
-    protected $fillable = ['activation_code_hash', 'activation_code_last4', 'booklet_template_id', 'card_batch_id', 'status', 'activated_by_user_id', 'activated_at', 'expires_at', 'created_by'];
+    protected $fillable = ['activation_code_hash', 'activation_code_encrypted', 'activation_code_last4', 'booklet_template_id', 'card_batch_id', 'status', 'activated_by_user_id', 'activated_at', 'expires_at', 'created_by'];
 
-    protected $hidden = ['activation_code_hash'];
+    protected $hidden = ['activation_code_hash', 'activation_code_encrypted'];
 
     protected $casts = ['activated_at' => 'datetime', 'expires_at' => 'datetime'];
 

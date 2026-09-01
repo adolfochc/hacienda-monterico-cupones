@@ -19,5 +19,21 @@ test('administrator generates a batch without storing plaintext activation codes
     $response->assertOk()->assertDownload();
     expect(MembershipCard::count())->toBe(3)->and(MembershipCard::where('status', 'available')->count())->toBe(3);
     $card = MembershipCard::first();
-    expect($card->getAttributes())->not->toHaveKey('activation_code')->and(strlen($card->activation_code_hash))->toBe(64);
+    expect($card->getAttributes())->not->toHaveKey('activation_code')->and(strlen($card->activation_code_hash))->toBe(64)
+        ->and($card->activation_code_encrypted)->not->toBeNull();
+
+    $this->actingAs($admin)->get(route('card-batches.export', $card->batch))->assertOk()->assertDownload();
+});
+
+test('legacy unused batch rotates unrecoverable codes before exporting again', function () {
+    $admin = User::factory()->create(['role' => 'admin', 'status' => 'active', 'email_verified_at' => now()]);
+    $coupon = Coupon::create(['name' => 'Postre', 'valid_from' => today(), 'valid_until' => today()->addMonth(), 'is_active' => true]);
+    $template = App\Models\BookletTemplate::create(['name' => 'Legado', 'is_active' => true]);
+    $template->items()->create(['coupon_id' => $coupon->id, 'quantity' => 1]);
+    $batch = App\Models\CardBatch::create(['name' => 'Lote legado', 'booklet_template_id' => $template->id, 'quantity' => 1, 'status' => 'active', 'created_by' => $admin->id]);
+    $card = MembershipCard::create(['activation_code_hash' => app(App\Services\ActivationCodeService::class)->hash('CODIGO-ANTERIOR'), 'activation_code_last4' => 'RIOR', 'booklet_template_id' => $template->id, 'card_batch_id' => $batch->id, 'status' => 'available']);
+
+    $oldHash = $card->activation_code_hash;
+    $this->actingAs($admin)->get(route('card-batches.export', $batch))->assertOk()->assertDownload();
+    expect($card->fresh()->activation_code_encrypted)->not->toBeNull()->and($card->fresh()->activation_code_hash)->not->toBe($oldHash);
 });

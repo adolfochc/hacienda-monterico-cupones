@@ -41,6 +41,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session')])->group(fun
             Route::patch('/socios/{member}/estado', [MemberController::class, 'toggleStatus'])->name('members.status');
             Route::get('/tarjetas', [CardBatchController::class, 'index'])->name('cards.index');
             Route::post('/lotes', [CardBatchController::class, 'store'])->name('card-batches.store');
+            Route::get('/lotes/{batch}/exportar', [CardBatchController::class, 'export'])->name('card-batches.export');
             Route::patch('/tarjetas/{card}/estado', [CardBatchController::class, 'toggle'])->name('cards.status');
             Route::get('/exportaciones/socios', [ExportController::class, 'members'])->name('exports.members');
             Route::get('/exportaciones/resumen', [ExportController::class, 'summary'])->name('exports.summary');
