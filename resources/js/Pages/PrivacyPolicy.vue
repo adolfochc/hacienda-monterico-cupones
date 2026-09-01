@@ -48,7 +48,7 @@ export default {
                                 <CheckCircleIcon class="text-success icon-dual-success icon-xs" />
                             </div>
                             <div class="flex-grow-1">
-                                <h5>Privacy Policy for velzon</h5>
+                                <h5>Política de privacidad de Hacienda Monterrico</h5>
                                 <p class="text-muted">At Website Name, accessible at Website.com, one of our main priorities is the
                                     privacy of our visitors. This Privacy Policy document contains types of information that is collected
                                     and recorded by Website Name and how we use it.</p>

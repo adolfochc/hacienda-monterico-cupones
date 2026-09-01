@@ -36,6 +36,7 @@ test('registration sends otp and activation creates one booklet atomically', fun
     [$card,$plain] = registrationCard();
     $this->post(route('membership.register.store'), ['name' => 'Familia Uno', 'phone' => '999999999', 'email' => 'familia@example.com', 'password' => 'ClaveSegura123!', 'password_confirmation' => 'ClaveSegura123!', 'activation_code' => $plain])->assertRedirect();
     $pending = EmailVerificationCode::firstOrFail();
+    expect($pending->expires_at->diffInSeconds($pending->created_at))->toBeLessThanOrEqual(300.0);
     $code = null;
     Notification::assertSentOnDemand(RegistrationVerificationCode::class, function ($notification) use (&$code) {
         $code = $notification->code;

@@ -31,7 +31,7 @@ class MembershipRegistrationController extends Controller
         }
         $plain = (string) random_int(100000, 999999);
         $token = (string) Str::uuid();
-        $verification = EmailVerificationCode::create(['registration_token' => $token, 'email' => Str::lower($data['email']), 'code_hash' => Hash::make($plain), 'payload' => ['name' => $data['name'], 'phone' => $data['phone'], 'password' => $data['password'], 'card_id' => $card->id], 'expires_at' => now()->addMinutes(10), 'last_sent_at' => now()]);
+        $verification = EmailVerificationCode::create(['registration_token' => $token, 'email' => Str::lower($data['email']), 'code_hash' => Hash::make($plain), 'payload' => ['name' => $data['name'], 'phone' => $data['phone'], 'password' => $data['password'], 'card_id' => $card->id], 'expires_at' => now()->addMinutes(5), 'last_sent_at' => now()]);
         Notification::route('mail', $verification->email)->notify(new RegistrationVerificationCode($plain));
 
         return redirect()->route('membership.verify.show', $token);
@@ -41,7 +41,7 @@ class MembershipRegistrationController extends Controller
     {
         $v = EmailVerificationCode::where('registration_token', $token)->firstOrFail();
 
-        return Inertia::render('Auth/MembershipVerify', ['registrationToken' => $token, 'maskedEmail' => $this->mask($v->email), 'retryAfter' => max(0, 60 - $v->last_sent_at->diffInSeconds(now()))]);
+        return Inertia::render('Auth/MembershipVerify', ['registrationToken' => $token, 'maskedEmail' => $this->mask($v->email), 'retryAfter' => max(0, 60 - $v->last_sent_at->diffInSeconds(now())), 'expiresAt' => $v->expires_at->timestamp]);
     }
 
     public function verify(Request $request, ActivateMembership $activate)
@@ -71,7 +71,7 @@ class MembershipRegistrationController extends Controller
             throw ValidationException::withMessages(['code' => 'Espera antes de solicitar otro código.']);
         }
         $plain = (string) random_int(100000, 999999);
-        $v->update(['code_hash' => Hash::make($plain), 'expires_at' => now()->addMinutes(10), 'attempts' => 0, 'resend_count' => $v->resend_count + 1, 'last_sent_at' => now()]);
+        $v->update(['code_hash' => Hash::make($plain), 'expires_at' => now()->addMinutes(5), 'attempts' => 0, 'resend_count' => $v->resend_count + 1, 'last_sent_at' => now()]);
         Notification::route('mail', $v->email)->notify(new RegistrationVerificationCode($plain));
 
         return back()->with('success', 'Enviamos un código nuevo.');
