@@ -15,14 +15,19 @@ class VelzonRoutesController extends Controller
 
     public function dashboard(Request $request)
     {
+        if ($request->user()->role === 'staff') {
+            return redirect()->route('staff.redeem');
+        }
         if (!$request->user()->isAdmin()) {
             $assignments = $request->user()->couponAssignments()->with('coupon')->latest('assigned_at')->get()->map(fn ($assignment) => [
                 'id' => $assignment->id,
-                'status' => $assignment->status,
+                'status' => $assignment->status !== 'available' ? $assignment->status : (!$assignment->coupon->is_active ? 'inactive' : ($assignment->coupon->valid_until->lt(today()) ? 'expired' : ($assignment->coupon->valid_from->gt(today()) ? 'upcoming' : 'available'))),
                 'redeemed_at' => $assignment->redeemed_at?->format('d/m/Y H:i'),
                 'coupon' => [
                     'name' => $assignment->coupon->name,
                     'description' => $assignment->coupon->description,
+                    'terms' => $assignment->coupon->terms,
+                    'valid_from' => $assignment->coupon->valid_from->format('d/m/Y'),
                     'valid_until' => $assignment->coupon->valid_until->format('d/m/Y'),
                 ],
             ]);
@@ -31,7 +36,20 @@ class VelzonRoutesController extends Controller
                 'assignments as available_count' => fn ($q) => $q->where('status', 'available'),
                 'assignments as redeemed_count' => fn ($q) => $q->where('status', 'redeemed'),
             ])->first();
-            return Inertia::render('member/Dashboard', ['assignments' => $assignments, 'booklet' => $booklet]);
+            $campaign = config('membership_campaign');
+            $entries = $request->user()->couponAssignments()
+                ->where('status', 'redeemed')
+                ->whereBetween('redeemed_at', [$campaign['starts_on'].' 00:00:00', $campaign['ends_on'].' 23:59:59'])
+                ->whereHas('coupon', fn ($q) => $q->whereIn('name', array_column($campaign['coupons'], 'name'))
+                    ->whereDate('valid_from', $campaign['starts_on'])->whereDate('valid_until', $campaign['ends_on']))
+                ->count();
+            return Inertia::render('member/Dashboard', ['assignments' => $assignments, 'booklet' => $booklet, 'campaign' => [
+                'entries' => $entries,
+                'prize' => $campaign['prize'],
+                'starts_on' => \Carbon\Carbon::parse($campaign['starts_on'])->format('d/m/Y'),
+                'ends_on' => \Carbon\Carbon::parse($campaign['ends_on'])->format('d/m/Y'),
+                'draw_on' => \Carbon\Carbon::parse($campaign['draw_on'])->format('d/m/Y'),
+            ]]);
         }
 
         return Inertia::render('dashboards/ecommerce/index', [
@@ -52,13 +70,14 @@ class VelzonRoutesController extends Controller
         abort_unless($assignment->user_id === $request->user()->id, 403);
         $assignment->load('coupon');
         abort_unless(
-            $assignment->status === 'available' && $assignment->coupon->is_active && !$assignment->coupon->valid_until->lt(today()),
+            $request->user()->status === 'active' && !$assignment->coupon->valid_from->gt(today()) && $assignment->status === 'available' && $assignment->coupon->is_active && !$assignment->coupon->valid_until->lt(today()),
             422,
             'Este cupón ya no está disponible.'
         );
 
         return response()->json([
             'token' => CouponQrToken::issue($assignment),
+            'code' => \App\Services\CouponRedemptionCode::issue($assignment),
             'expires_at' => now()->addMinutes(5)->timestamp,
         ]);
     }

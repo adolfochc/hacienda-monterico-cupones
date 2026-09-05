@@ -36,7 +36,7 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
         Fortify::authenticateUsing(function (Request $request) {
             $login = $request->input('email');
-            $user = User::where('email', $login)->orWhere('member_code', $login)->first();
+            $user = User::where('email', Str::lower(trim($login)))->first();
             if (!$user || $user->status !== 'active' || !Hash::check($request->password, $user->password)) return null;
             if ($user->role === 'member' && !$user->invitation_used_at) $user->forceFill(['invitation_used_at' => now()])->save();
             return $user;

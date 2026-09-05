@@ -36,7 +36,13 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session')])->group(fun
         Route::get('/', [VelzonRoutesController::class, 'dashboard']);
         Route::post('/mis-cupones/{assignment}/qr', [VelzonRoutesController::class, 'refreshCouponQr'])->name('member.coupons.qr');
 
+        Route::middleware('can.redeem')->group(function () {
+            Route::get('/canjes', [CouponController::class, 'staff'])->name('staff.redeem');
+            Route::post('/canjes/qr/validar', [CouponController::class, 'validateQr'])->middleware('throttle:30,1')->name('coupons.qr.validate');
+            Route::post('/canjes/qr/canjear', [CouponController::class, 'redeemQr'])->middleware('throttle:30,1')->name('coupons.qr.redeem');
+        });
         Route::middleware('admin')->group(function () {
+            Route::post('/asignaciones/{assignment}/canjear', [CouponController::class, 'redeem'])->name('coupons.redeem');
             Route::get('/socios', [MemberController::class, 'index'])->name('members.index');
             Route::patch('/socios/{member}/estado', [MemberController::class, 'toggleStatus'])->name('members.status');
             Route::get('/tarjetas', [CardBatchController::class, 'index'])->name('cards.index');
@@ -48,9 +54,6 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session')])->group(fun
             Route::get('/cupones', [CouponController::class, 'index'])->name('coupons.index');
             Route::post('/cupones', [CouponController::class, 'store'])->name('coupons.store');
             Route::post('/cupones/{coupon}/asignar', [CouponController::class, 'assign'])->name('coupons.assign');
-            Route::post('/asignaciones/{assignment}/canjear', [CouponController::class, 'redeem'])->name('coupons.redeem');
-            Route::post('/canjes/qr/validar', [CouponController::class, 'validateQr'])->name('coupons.qr.validate');
-            Route::post('/canjes/qr/canjear', [CouponController::class, 'redeemQr'])->name('coupons.qr.redeem');
         });
 
         Route::controller(VelzonRoutesController::class)->group(function () {

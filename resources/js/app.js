@@ -3,6 +3,7 @@ import '../scss/config/minimal/app.scss';
 import '@vueform/slider/themes/default.css';
 import '../scss/mermaid.min.css';
 import '../css/hacienda-responsive.css';
+import '../css/hacienda-brand.css';
 
 import { createApp, h } from 'vue';
 import { createInertiaApp } from '@inertiajs/vue3';

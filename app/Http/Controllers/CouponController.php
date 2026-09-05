@@ -13,6 +13,11 @@ use App\Services\CouponQrToken;
 
 class CouponController extends Controller
 {
+    public function staff()
+    {
+        return Inertia::render('coupons/index', ['staffOnly' => true, 'coupons' => [], 'members' => [], 'assignments' => []]);
+    }
+
     public function index()
     {
         $coupons = Coupon::withCount([
@@ -42,8 +47,17 @@ class CouponController extends Controller
 
     public function assign(Request $request, Coupon $coupon)
     {
-        $data = $request->validate(['user_ids' => ['required', 'array', 'min:1'], 'user_ids.*' => ['exists:users,id']]);
-        foreach ($data['user_ids'] as $userId) CouponAssignment::firstOrCreate(['coupon_id' => $coupon->id, 'user_id' => $userId], ['assigned_at' => now()]);
+        $data = $request->validate(['all_members' => ['sometimes', 'boolean'], 'user_ids' => ['required_unless:all_members,true', 'array'], 'user_ids.*' => ['integer', 'exists:users,id']]);
+        $members = User::where('role', 'member')->where('status', 'active');
+        if (!($data['all_members'] ?? false)) {
+            if (empty($data['user_ids'])) throw ValidationException::withMessages(['user_ids' => 'Selecciona al menos un socio.']);
+            $members->whereIn('id', $data['user_ids']);
+        }
+        DB::transaction(function () use ($members, $coupon) {
+            foreach ($members->orderBy('id')->lockForUpdate()->get() as $member) {
+                CouponAssignment::firstOrCreate(['coupon_id' => $coupon->id, 'user_id' => $member->id], ['assigned_at' => now(), 'public_id' => (string) \Illuminate\Support\Str::uuid()]);
+            }
+        });
         return back()->with('success', 'Cupón asignado correctamente.');
     }
 
@@ -51,10 +65,10 @@ class CouponController extends Controller
     {
         DB::transaction(function () use ($assignment, $request) {
             $locked = CouponAssignment::query()->lockForUpdate()->findOrFail($assignment->id);
-            if ($locked->status !== 'available' || !$locked->coupon->is_active || now()->toDateString() > $locked->coupon->valid_until->toDateString()) {
+            if ($locked->member->status !== 'active' || $locked->coupon->valid_from->gt(today()) || $locked->status !== 'available' || !$locked->coupon->is_active || now()->toDateString() > $locked->coupon->valid_until->toDateString()) {
                 throw ValidationException::withMessages(['coupon' => 'Este cupón ya no está disponible para canje.']);
             }
-            $locked->update(['status' => 'redeemed', 'redeemed_at' => now(), 'redeemed_by' => $request->user()->id, 'redemption_note' => $request->input('note'), 'redemption_method' => $request->filled('token') ? 'qr' : 'manual']);
+            $locked->update(['status' => 'redeemed', 'redeemed_at' => now(), 'redeemed_by' => $request->user()->id, 'redemption_note' => $request->input('note'), 'redemption_method' => $request->filled('code') ? 'code' : ($request->filled('token') ? 'qr' : 'manual')]);
             if ($locked->booklet_id && !CouponAssignment::where('booklet_id', $locked->booklet_id)->where('status', 'available')->exists()) {
                 $locked->booklet()->update(['status' => 'exhausted']);
             }
@@ -64,9 +78,9 @@ class CouponController extends Controller
 
     public function validateQr(Request $request)
     {
-        $data = $request->validate(['token' => ['required', 'string', 'max:5000']]);
-        $assignment = CouponQrToken::resolve($data['token']);
-        if ($assignment->status !== 'available' || !$assignment->coupon->is_active || $assignment->coupon->valid_until->lt(today())) {
+        $data = $request->validate(['token' => ['required_without:code', 'string', 'max:5000'], 'code' => ['required_without:token', 'string', 'regex:/^[0-9\s-]{10,16}$/']]);
+        $assignment = $request->filled('code') ? \App\Services\CouponRedemptionCode::resolve($data['code']) : CouponQrToken::resolve($data['token']);
+        if ($assignment->coupon->valid_from->gt(today()) || $assignment->status !== 'available' || !$assignment->coupon->is_active || $assignment->coupon->valid_until->lt(today())) {
             throw ValidationException::withMessages(['token' => 'Este cupón ya fue canjeado, venció o no está activo.']);
         }
         if ($assignment->member->status !== 'active') {
@@ -86,8 +100,8 @@ class CouponController extends Controller
 
     public function redeemQr(Request $request)
     {
-        $data = $request->validate(['token' => ['required', 'string', 'max:5000']]);
-        $assignment = CouponQrToken::resolve($data['token']);
+        $data = $request->validate(['token' => ['required_without:code', 'string', 'max:5000'], 'code' => ['required_without:token', 'string', 'regex:/^[0-9\s-]{10,16}$/']]);
+        $assignment = $request->filled('code') ? \App\Services\CouponRedemptionCode::resolve($data['code']) : CouponQrToken::resolve($data['token']);
         return $this->redeem($request, $assignment);
     }
 }

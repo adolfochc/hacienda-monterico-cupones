@@ -3,14 +3,28 @@ import { ref, computed, nextTick, onBeforeUnmount } from 'vue';
 import { Head, useForm, router } from '@inertiajs/vue3';
 import jsQR from 'jsqr';
 import Layout from '@/Layouts/main.vue';
+import BrandLogo from '@/Components/BrandLogo.vue';
 
-const props = defineProps({ coupons: Array, members: Array, assignments: Array });
+const props = defineProps({ coupons: Array, members: Array, assignments: Array, staffOnly: Boolean });
 const search = ref('');
 const showCreate = ref(false);
 const assigning = ref(null);
 const filtered = computed(() => props.assignments.filter((a) => (a.member.name + a.member.member_code + a.coupon.name).toLowerCase().includes(search.value.toLowerCase())));
 const createForm = useForm({ name: '', description: '', valid_from: new Date().toISOString().slice(0, 10), valid_until: '' });
-const assignForm = useForm({ user_ids: [] });
+const assignForm = useForm({ user_ids: [], all_members: false });
+const manualCode = ref('');
+const validating = ref(false);
+const redeeming = ref(false);
+const useCode = ref(false);
+async function validateCode() {
+    if (validating.value) return;
+    validating.value = true; scanError.value = '';
+    try {
+        const {data} = await window.axios.post(route('coupons.qr.validate'), {code:manualCode.value});
+        qrData.value = data; useCode.value = true;
+    } catch(e) { scanError.value = Object.values(e.response?.data?.errors || {}).flat()[0] || 'No se pudo validar el código.'; }
+    finally { validating.value = false; }
+}
 const create = () => createForm.post(route('coupons.store'), { onSuccess: () => (showCreate.value = false) });
 const assign = () => assignForm.post(route('coupons.assign', assigning.value.id), { onSuccess: () => (assigning.value = null) });
 const redeem = (a) => confirm(`¿Canjear ${a.coupon.name} para ${a.member.name}?`) && router.post(route('coupons.redeem', a.id));
@@ -210,6 +224,7 @@ async function scanFile(event) {
 async function validateToken(token) {
     try {
         const { data } = await window.axios.post(route('coupons.qr.validate'), { token });
+        useCode.value = false;
         qrToken.value = token;
         qrData.value = data;
         stopScanner();
@@ -222,27 +237,34 @@ async function validateToken(token) {
 }
 
 function confirmQr() {
-    router.post(route('coupons.qr.redeem'), { token: qrToken.value }, { onSuccess: () => { qrData.value = null; qrToken.value = ''; } });
+    if (redeeming.value) return;
+    redeeming.value = true;
+    router.post(route('coupons.qr.redeem'), useCode.value ? {code:manualCode.value} : {token:qrToken.value}, {
+        onSuccess: () => { qrData.value = null; qrToken.value = ''; manualCode.value = ''; scanError.value = ''; },
+        onError: errors => { scanError.value = Object.values(errors).flat()[0] || 'No se pudo confirmar el canje.'; qrData.value = null; },
+        onFinish: () => { redeeming.value = false; },
+    });
 }
 
 onBeforeUnmount(stopScanner);
 </script>
 <template>
-    <Layout>
+    <component :is="staffOnly ? 'div' : Layout">
         <Head title="Cupones"/>
-        <div class="page">
+        <div class="page hmr-brand" :class="{'staff-page':staffOnly}"><div v-if="staffOnly" class="staff-header"><BrandLogo/><button @click="router.post(route('logout'))">Cerrar sesión</button></div><div v-if="$page.props.flash?.success" role="status" class="success-message">{{$page.props.flash.success}}</div>
             <header>
                 <div>
                     <small>CUPONERA VIGENTE</small>
-                    <h1>Cupones</h1>
-                    <p>Crea, asigna y registra canjes.</p>
+                    <h1>{{ staffOnly ? 'Canjear un beneficio' : 'Cupones' }}</h1>
+                    <p>{{ staffOnly ? 'Escanea el QR o ingresa el código que te muestra el socio.' : 'Crea, asigna y registra canjes.' }}</p>
                 </div>
                 <div>
                     <button class="scan" @click="startScanner"><i class="ri-qr-scan-2-line"></i> Escanear QR</button>
-                    <button class="primary" @click="showCreate=true">Crear cupón</button>
+                    <button v-if="!staffOnly" class="primary" @click="showCreate=true">Crear cupón</button>
                 </div>
             </header>
-            <section class="cards">
+            <section class="code-entry"><form @submit.prevent="validateCode"><label for="redemption-code">Canjear con código</label><p>Ingresa los 10 dígitos y verifica los datos antes de confirmar.</p><div><input id="redemption-code" v-model="manualCode" inputmode="numeric" autocomplete="off" maxlength="16" placeholder="12345 67890" required><button class="primary" :disabled="validating">{{validating?'Verificando…':'Validar código'}}</button></div></form><p v-if="scanError" role="alert" class="error">{{scanError}}</p></section>
+            <section v-if="!staffOnly" class="cards">
                 <article v-for="c in coupons" :key="c.id">
                     <div class="ticket">
                         <small>BENEFICIO PARA SOCIOS</small>
@@ -254,10 +276,10 @@ onBeforeUnmount(stopScanner);
                         <div><dt>Canjeados</dt><dd>{{ c.redeemed_count }}</dd></div>
                         <div><dt>Disponibles</dt><dd>{{ c.available_count }}</dd></div>
                     </dl>
-                    <button @click="assigning=c">Asignar</button>
+                    <button @click="assigning=c;assignForm.reset();assignForm.clearErrors()">Asignar</button>
                 </article>
             </section>
-            <section class="list">
+            <section v-if="!staffOnly" class="list">
                 <div class="list-head">
                     <h2>Canje manual</h2>
                     <input v-model="search" placeholder="Buscar socio o cupón">
@@ -293,7 +315,7 @@ onBeforeUnmount(stopScanner);
             </div>
             <div v-if="qrData" class="mask">
                 <section class="confirm">
-                    <span>QR VERIFICADO</span>
+                    <span>BENEFICIO VERIFICADO</span>
                     <h2>{{ qrData.coupon.name }}</h2>
                     <p>{{ qrData.coupon.description }}</p>
                     <dl>
@@ -301,10 +323,10 @@ onBeforeUnmount(stopScanner);
                         <div><dt>Código</dt><dd>{{ qrData.member.member_code }}</dd></div>
                         <div><dt>Vigencia</dt><dd>{{ qrData.coupon.valid_until }}</dd></div>
                     </dl>
-                    <div class="secure"><i class="ri-shield-check-line"></i> Token cifrado y válido</div>
+                    <div class="secure"><i class="ri-shield-check-line"></i> Confirma con el socio antes de marcar el cupón como utilizado</div>
                     <footer>
                         <button @click="qrData=null">Cancelar</button>
-                        <button class="primary" @click="confirmQr">Confirmar canje</button>
+                        <button class="primary" :disabled="redeeming" @click="confirmQr">{{redeeming?'Registrando…':'Confirmar canje'}}</button>
                     </footer>
                 </section>
             </div>
@@ -326,19 +348,19 @@ onBeforeUnmount(stopScanner);
             <div v-if="assigning" class="mask">
                 <form class="form" @submit.prevent="assign">
                     <h2>Asignar {{ assigning.name }}</h2>
-                    <label v-for="m in members" :key="m.id" class="member">
+                    <label class="member"><input v-model="assignForm.all_members" type="checkbox"> Asignar a todos los socios activos ({{members.length}})</label><p v-if="assignForm.all_members">Se asignará una vez a cada socio activo actual. Los canjes existentes se conservan.</p><div v-if="!assignForm.all_members"><label v-for="m in members" :key="m.id" class="member">
                         <input v-model="assignForm.user_ids" type="checkbox" :value="m.id"> {{ m.name }} · {{ m.member_code }}
-                    </label>
+                    </label></div><p v-for="error in assignForm.errors" class="error">{{error}}</p>
                     <footer>
                         <button type="button" @click="assigning=null">Cancelar</button>
-                        <button class="primary">Asignar</button>
+                        <button class="primary" :disabled="assignForm.processing">{{assignForm.processing?'Asignando…':'Asignar'}}</button>
                     </footer>
                 </form>
             </div>
         </div>
-    </Layout>
+    </component>
 </template>
-<style scoped>
+<style scoped>.staff-page{padding:28px 20px;min-height:100dvh;background:#fff8e9;max-width:860px!important}.staff-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:32px;gap:20px}.staff-header .hmr-logo{width:170px}.code-entry{margin-top:24px;background:#fff8e9;padding:24px;border:1px solid #9c8a7266;border-radius:12px}.code-entry label{font-weight:700}.code-entry p{font-size:12px}.code-entry form>div{display:flex;gap:12px;flex-wrap:wrap}.code-entry input{padding:12px;min-height:48px;max-width:100%;border:1px solid #9c8a72;border-radius:6px;font-size:20px;letter-spacing:.1em}.success-message{padding:16px;background:#e7ecdf;color:#332820;margin:16px 0}.ticket h2{color:#fff8e9}.page.hmr-brand h1,.page.hmr-brand h2{font-family:"Libre Baskerville",Georgia,serif}.page.hmr-brand .ticket{background:#8f3b28}.page.hmr-brand .ticket h2{color:#fff8e9}.page.hmr-brand .scan{background:#332820;border-color:#332820}@media(max-width:500px){.code-entry{padding:18px}.code-entry input,.code-entry button{width:100%}.staff-header .hmr-logo{width:140px}}
 .page{max-width:1400px;margin:auto;color:#332820}
 .page>header{display:flex;justify-content:space-between;align-items:end}
 .page>header small,.confirm>span{color:#8f3b28;letter-spacing:.18em;font-weight:800}
@@ -382,4 +404,6 @@ td small{display:block;color:#91877e}
 .member{background:white;padding:9px}
 @media(max-width:900px){.cards{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:600px){.cards{grid-template-columns:1fr}.page>header,.list-head{align-items:start;gap:12px;flex-direction:column}}
+.page .confirm dl{gap:14px}.page .confirm dd{overflow-wrap:anywhere}
+@media(max-width:600px){.page .confirm dl{grid-template-columns:1fr}.page .confirm dt{font-size:10px}.page .confirm dd{font-size:14px}}
 </style>

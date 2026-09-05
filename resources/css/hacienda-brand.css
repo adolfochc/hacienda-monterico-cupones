@@ -1,0 +1,12 @@
+@font-face{font-family:Montserrat;src:url('../fonts/brand/Montserrat.ttf') format('truetype');font-weight:100 900;font-display:swap}
+@font-face{font-family:'Libre Baskerville';src:url('../fonts/brand/LibreBaskerville.ttf') format('truetype');font-weight:400 700;font-display:swap}
+:root{--hmr-cream:#fff8e9;--hmr-brown:#332820;--hmr-rust:#8f3b28;--hmr-olive:#576443;--hmr-sand:#9c8a72;--hmr-gold:#bfb574}
+.hmr-brand{font-family:Montserrat,Arial,sans-serif;color:var(--hmr-brown);line-height:1.6}
+.hmr-brand h1,.hmr-brand h2,.hmr-brand h3{font-family:'Libre Baskerville',Georgia,serif;color:inherit;line-height:1.25}
+.hmr-brand input,.hmr-brand button,.hmr-brand select{font:inherit}
+.hmr-brand input{font-weight:400}
+.hmr-brand :is(button,a,input,select):focus-visible{outline:3px solid #9c8a72;outline-offset:4px}
+.hmr-brand button:disabled{opacity:.55;cursor:not-allowed}
+.hmr-brand button,.hmr-brand a{touch-action:manipulation}
+.hmr-brand .hmr-logo{vertical-align:middle}
+@media(prefers-reduced-motion:reduce){.hmr-brand *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
